@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Signal Lab</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<main>
+<div class="company-bar">
+<select id="company" aria-label="Company"><option value="NVDA">NVDA · NVIDIA</option></select>
+<button id="refresh">↻ Update market data</button>
+<input id="companySearch" type="search" aria-label="Find another company" placeholder="Find another company…">
+<span id="refreshStatus" role="status" aria-live="polite"></span>
+</div>
+<section class="workspace">
+<aside class="smoothers" aria-label="Smoothing controls">
+<h2>Smooth</h2>
+<label>W <output id="windowValue"></output><input id="window" aria-label="Smoothing window" type="range" min="3" max="81" step="2" value="21"></label>
+<label>α <output id="alphaValue"></output><input id="alpha" aria-label="Exponential alpha" type="range" min="1" max="100" value="18"></label>
+<div id="methods"></div>
+</aside>
+<div class="plots">
+<div class="chart-head"><h2 id="chartTitle">Loading…</h2><label class="toggle"><input id="raw" type="checkbox" checked> Price</label></div>
+<div id="periods" class="periods" role="group" aria-label="Viewing window"></div>
+<div id="chartLegend" class="chart-legend" aria-label="Selected curves and indicator ranges"></div>
+<div class="chart-wrap"><canvas id="chart" aria-label="Stock value, selected smoothed curves and technical indicators" role="img"></canvas><div id="tooltip" hidden></div><div id="comparisonBox" class="comparison-box" aria-label="Draggable point comparison"><button id="comparisonHandle" aria-label="Drag comparison results">⠿</button><output id="comparison" aria-live="polite">Click two points to compare</output><button id="clearPoints" hidden>Clear</button></div></div>
+<div class="chart-footer"><span id="sampleCount"></span><button id="reset">Reset</button><button id="export">↓ CSV</button></div>
+<p id="status" role="status" aria-live="polite"></p>
+</div>
+<aside class="indicators" aria-label="Indicator controls">
+<h2>Indicators</h2>
+<label>N <input id="indicatorPeriod" aria-label="Indicator period in bars" type="number" min="2" max="200" value="20"></label>
+<div id="indicatorMethods"></div>
+</aside>
+</section>
+<div hidden><span id="catalogStatus"></span><span id="rangeNote"></span><span id="indicatorNote"></span><div id="metrics"></div></div>
+</main><script type="module" src="app.js"></script>
+</body></html>
