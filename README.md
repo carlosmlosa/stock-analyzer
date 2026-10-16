@@ -14,6 +14,17 @@ python -m pip install -r requirements.txt
 
 On Windows, activate the environment with `.venv\Scripts\activate` instead.
 
+## Debug in VS Code
+
+Install the Microsoft Python and Python Debugger extensions, open this repository
+as your workspace, and use **Python: Select Interpreter** to select `.venv`.
+After installing the requirements above, select **Signal Lab: Python server** in
+**Run and Debug** and press **F5**. The launch configuration automatically opens
+[Signal Lab](http://localhost:8000/playground/) in your default browser. Breakpoints in
+`server.py` and its Python imports work, including market refresh requests.
+Stop the server with **Shift+F5**. See [VS Code debugging](docs/vscode-debugging.md)
+for configuration details and alternatives.
+
 ## Download and plot
 
 ```bash
@@ -83,14 +94,14 @@ The graph workspace spans the full page width, without outer side margins, a sur
 
 ## Market refresh and technical indicators
 
-Start the local server to enable **Update market data** for the selected company:
+Start the local server to enable **Update all market data** for every catalog symbol:
 
 ```bash
 source .venv/bin/activate
 python server.py
 ```
 
-Open [Signal Lab](http://localhost:8000/playground/). The button downloads the latest available adjusted regular-session hourly bars from Yahoo Finance, replaces the selected company's local hourly CSV, updates the catalog, and reloads the chart. The latest timestamp is shown above the chart. Provider data can be delayed and the current bar can be incomplete. A failed download preserves existing prices. The plain `http.server` command still supports offline charts, but cannot fetch market updates. To refresh all companies, use `python download_sp500.py --refresh --resolution hourly`.
+Open [Signal Lab](http://localhost:8000/playground/). The button downloads the latest available adjusted regular-session hourly bars from Yahoo Finance for every symbol in the cached S&P 500 catalog, requests only the range from each symbol’s latest saved timestamp to now, merges new bars into its CSV, updates the catalog, and reloads the selected chart. The last saved bar is requested again to update an incomplete bar; duplicate timestamps keep the newly fetched value. Symbols without a file get an initial history download. Older saved history is preserved. It uses four isolated workers in batches and can take several minutes. The button stays disabled until completion; concurrent refresh requests are rejected. The completion message reports updated and failed symbol counts; failed symbols retain their existing prices, and failures are recorded in the manifest. The latest timestamp is shown above the chart. Provider data can be delayed and the current bar can be incomplete. A failed download preserves existing prices. The plain `http.server` command still supports offline charts, but cannot fetch market updates. The CLI alternative is `python download_sp500.py --refresh --resolution hourly`; it also refreshes the constituent list. The browser refresh updates hourly prices only, leaving daily files unchanged.
 
 Choose **SMA, EMA, RSI, MACD, Volatility, and ATR** using the sidebar checkboxes alongside the smoothing methods. All selected curves appear on the stock chart and share its date range, hover, zoom, and pan. Indicators are initially unchecked. SMA and EMA use the price axis; other indicators fit independently to the chart height, with actual visible ranges in the colored legend and actual values in the tooltip. The right axis shows relative position within each indicator's displayed range, not a shared financial unit. Curve intersections across different axes do not indicate equal values. RSI always uses 0–100. MACD includes its signal and histogram on the same indicator scale.
 
@@ -98,7 +109,7 @@ The indicator period defaults to 20 bars and controls SMA, EMA and volatility. R
 
 Overlaying curves makes visual comparison compact, but independent scales require reading the legend or tooltip. Separate panels preserve conventional axes but use more vertical space.
 
-Refresh alternatives: on-demand refresh gives explicit control and fewer provider requests, while automatic polling reduces manual work but creates background traffic and can hit provider limits. This implementation uses on-demand refresh. Refreshing all companies through the CLI is convenient for a complete snapshot but takes longer than refreshing the selection.
+Refresh alternatives: on-demand refresh gives explicit control and fewer provider requests, while automatic polling reduces manual work but creates background traffic and can hit provider limits. This implementation uses on-demand refresh. The existing button refreshes all catalog symbols for a consistent snapshot; selected-company updates would be faster and use fewer requests but leave other symbols stale.
 
 Verification: `cd playground && npm test` and `.venv/bin/python -m unittest discover -s tests -v` from the project root.
 
@@ -119,3 +130,18 @@ The comparison delta shows percentage first, followed by dollar change in parent
 ## Repository contents
 
 Git excludes the virtual environment, Python caches and downloaded market snapshots under `data/`. After cloning, install requirements and run `python download_sp500.py` to recreate the company catalog and prices before starting `python server.py`.
+
+### Incremental market updates
+
+The browser's **Update all market data** fetches recent missing hourly bars for
+all catalog symbols, rather than downloading their full history again. This
+fills the tail since each file's latest timestamp; it does not scan for gaps
+inside older history. Requests are limited to Yahoo's available hourly window
+(729 days here); older unavailable gaps cannot be recovered by this button.
+Empty or failed provider responses leave the symbol's file unchanged and appear
+in the failure summary. Daily files remain unchanged.
+
+Incremental updates minimize transfers and preserve local history. A full
+`python download_sp500.py --refresh --resolution hourly` rebuild downloads more
+data but can repair older gaps and reconcile historical price adjustments from
+splits or dividends; incremental updates do not rescale older saved bars.

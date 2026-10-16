@@ -235,10 +235,9 @@ $('export').onclick=()=>{if(!values.length)return;const content=[['sample','date
 
 $('indicatorPeriod').onchange=update;
 $('refresh').onclick=async()=>{
- const ticker=selectedCompany;
- $('refresh').disabled=true;$('refreshStatus').textContent='Fetching latest available '+ticker+' hourly bars…';
+ $('refresh').disabled=true;$('refreshStatus').textContent='Fetching missing recent hourly bars for all symbols… This may take several minutes.';
  try{
-  const response=await fetch('/api/refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker})});
+  const response=await fetch('/api/refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
   if(response.status===501||response.status===404)throw new Error('Start the refresh server with: python server.py');
   const result=await response.json();if(!response.ok)throw new Error(result.message);
   $('refreshStatus').textContent=result.message;await loadCatalog();

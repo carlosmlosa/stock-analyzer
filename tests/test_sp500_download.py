@@ -45,6 +45,58 @@ class DownloadTests(unittest.TestCase):
             self.assertEqual(arguments['end']-arguments['start'],pd.Timedelta(days=729))
             save.assert_called_once()
 
+    def hourly_fixture(self):
+        (self.root / 'hourly').mkdir()
+        frame = pd.DataFrame({'Close': [10., 11., 12.]},
+            index=pd.date_range(pd.Timestamp.now(tz='UTC').floor('h') - pd.Timedelta(hours=4), periods=3, freq='h'))
+        downloader.save_prices(frame, 'AAPL', 'hourly')
+        return frame, self.root / 'hourly' / 'AAPL.csv'
+
+    def test_incremental_request_merges_single_new_bar_and_replaces_overlap(self):
+        frame, path = self.hourly_fixture()
+        recent = pd.DataFrame({'Close': [13., 14.]},
+            index=pd.DatetimeIndex([frame.index[-1], frame.index[-1] + pd.Timedelta(hours=1)]))
+        with patch.object(downloader.yf, 'download', return_value=recent) as fetch:
+            self.assertEqual(downloader.update_hourly(('AAPL', 'hourly')), ('AAPL', None))
+        self.assertEqual(fetch.call_args.kwargs['start'], frame.index[-1])
+        self.assertNotIn('period', fetch.call_args.kwargs)
+        saved = pd.read_csv(path)
+        self.assertEqual(saved.Close.tolist(), [10., 11., 13., 14.])
+        self.assertEqual(len(pd.to_datetime(saved.Date, utc=True).unique()), 4)
+        self.assertIn('-04:00' if frame.index[-1].tz_convert('America/New_York').dst() else '-05:00', saved.Date.iloc[-1])
+
+    def test_incremental_empty_response_preserves_file(self):
+        frame, path = self.hourly_fixture()
+        before = path.read_bytes()
+        with patch.object(downloader.yf, 'download', return_value=pd.DataFrame()):
+            ticker, error = downloader.update_hourly(('AAPL', 'hourly'))
+        self.assertIsNotNone(error)
+        self.assertEqual(path.read_bytes(), before)
+
+    def test_incremental_invalid_prices_preserve_file(self):
+        frame, path = self.hourly_fixture()
+        before = path.read_bytes()
+        with patch.object(downloader.yf, 'download', return_value=pd.DataFrame({'Close': ['bad']}, index=frame.index[:1])):
+            ticker, error = downloader.update_hourly(('AAPL', 'hourly'))
+        self.assertIsNotNone(error)
+        self.assertEqual(path.read_bytes(), before)
+
+    def test_incremental_missing_file_downloads_initial_history(self):
+        with patch.object(downloader, 'download_one', return_value=('NEW', None)) as download:
+            self.assertEqual(downloader.update_hourly(('NEW', 'hourly')), ('NEW', None))
+        download.assert_called_once_with(('NEW', 'hourly'))
+
+    def test_incremental_stale_file_limits_request_and_keeps_old_history(self):
+        frame, path = self.hourly_fixture()
+        old = frame.copy()
+        old.index = old.index - pd.Timedelta(days=900)
+        downloader.save_prices(old, 'AAPL', 'hourly')
+        with patch.object(downloader.yf, 'download', return_value=frame.iloc[-1:]) as fetch:
+            self.assertEqual(downloader.update_hourly(('AAPL', 'hourly')), ('AAPL', None))
+        args = fetch.call_args.kwargs
+        self.assertEqual(args['end'] - args['start'], pd.Timedelta(days=729))
+        self.assertEqual(len(pd.read_csv(path)), 4)
+
     def test_bad_response_does_not_replace_good_file(self):
         (self.root / 'daily').mkdir()
         path = self.root / 'daily' / 'AAPL.csv'

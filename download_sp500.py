@@ -99,6 +99,40 @@ def download_one(task):
         return ticker, str(error)
 
 
+def update_hourly(task):
+    """Append recent bars, overlapping the last bar to finish partial sessions."""
+    ticker, resolution = task
+    path = ROOT / resolution / (ticker + '.csv')
+    if not path.exists():
+        return download_one(task)
+    try:
+        existing = pd.read_csv(path)
+        existing.index = pd.to_datetime(existing.pop('Date'), utc=True)
+        if existing.empty or existing.index.hasnans:
+            raise ValueError('Existing prices have no usable timestamps.')
+        end = pd.Timestamp.now(tz='UTC')
+        # Yahoo cannot supply hourly bars older than its retention window.
+        start = max(existing.index.max(), end - pd.Timedelta(days=729))
+        if start >= end:
+            return ticker, None
+        recent = yf.download(ticker, start=start, end=end, interval='1h',
+            auto_adjust=True, prepost=False, multi_level_index=False,
+            threads=False, progress=False, timeout=20)
+        if recent is None or recent.empty:
+            raise ValueError('No recent prices returned; existing prices retained.')
+        recent = recent.dropna(subset=['Close']).copy()
+        if recent.empty or not pd.to_numeric(recent.Close, errors='coerce').notna().all():
+            raise ValueError('No usable recent prices returned.')
+        recent.index = pd.to_datetime(recent.index, utc=True)
+        if recent.index.hasnans:
+            raise ValueError('Recent prices have invalid timestamps.')
+        # save_prices sorts and deduplicates, keeping the newer overlapping bar.
+        save_prices(pd.concat([existing, recent]), ticker, resolution)
+        return ticker, None
+    except Exception as error:
+        return ticker, str(error)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--resolution', choices=['both', 'daily', 'hourly'], default='both')

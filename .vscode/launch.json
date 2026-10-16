@@ -1,0 +1,21 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Signal Lab: Python server",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/server.py",
+      "args": ["--port", "8000"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "redirectOutput": true,
+      "serverReadyAction": {
+        "pattern": "Open (http://localhost:[0-9]+/playground/)",
+        "uriFormat": "%s",
+        "action": "openExternally"
+      },
+      "justMyCode": true
+    }
+  ]
+}

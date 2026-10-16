@@ -68,7 +68,7 @@ The graph workspace spans the full page width, without outer side margins, a sur
 
 ## Latest market data and technical panels
 
-Use `python server.py` from the project root and open `/playground/` to enable **Update market data**. The local server binds to loopback and accepts a catalog ticker at `POST /api/refresh`. Refresh requests are serialized, download only hourly data for the requested company through the existing downloader, and rebuild the manifest after success. The browser reloads the current selection with cache disabled. Failures appear beside the button and retain existing chart data. Static hosting remains available for viewing local files; it displays server startup instructions when refresh is attempted. Yahoo data is latest available provider data, not a guaranteed real-time feed.
+Use `python server.py` from the project root and open `/playground/` to enable **Update all market data**. `POST /api/refresh` accepts a JSON object (`{}`) and incrementally updates hourly prices for every symbol in the cached catalog, independent of the browser selection. Each existing file requests only its latest saved timestamp through now; the overlapping last bar is replaced to complete an unfinished bar, new timestamps are appended, and older history is retained. A symbol without a local file receives an initial history download. Empty or invalid responses preserve the existing file and are reported as failures. The loopback server uses four isolated downloader processes, batches of 12, and a one-second pause between batches. Refreshing all symbols can take several minutes; the button remains disabled and displays a waiting message. Duplicate refresh requests receive HTTP 409 instead of queuing another full download. Daily files and the constituent snapshot are unchanged. The manifest is rebuilt after each batch with per-symbol errors. Successful downloads are retained even if other symbols fail; failures preserve existing files. The response includes `updated`, `total`, `errors`, and a summary message, including partial or total provider failures. The browser then reloads the catalog and current selection with cache disabled. An interrupted refresh reports an error; completed downloads remain saved. Static hosting displays server startup instructions when refresh is attempted. Yahoo data is latest available provider data, not a guaranteed real-time feed.
 
 The six sidebar indicator checkboxes overlay their selected curves on the main stock chart. They share its view range and calculate over all loaded bars, including history before the visible range. They use adjusted Close; ATR also uses aligned High and Low. The existing centered smoothing methods are separate from these causal indicators.
 
@@ -82,7 +82,7 @@ The period input (2–200 bars, default 20) controls SMA, EMA and volatility. Nu
 
 Overlaying indicators keeps comparisons compact and shares one set of chart interactions; independent scales require reading the actual ranges and do not support interpreting curve intersections as equal values. Separate panels are an alternative with conventional axes but require more vertical space.
 
-On-demand updates minimize traffic and are easy to control but require a click. Periodic refresh is an alternative that would reduce manual work at the cost of background requests and provider limits. Full-catalog updates are available via `download_sp500.py --refresh --resolution hourly` but take longer.
+On-demand updates minimize traffic and are easy to control but require a click. Periodic refresh is an alternative that would reduce manual work at the cost of background requests and provider limits. Full-catalog updates are configured for the button: they keep every symbol current but take longer and use more requests than selected-company updates. The CLI alternative `download_sp500.py --refresh --resolution hourly` also refreshes the constituent snapshot.
 
 Indicator conventions: [Fidelity technical indicator guide](https://www.fidelity.com/learning-center/trading-investing/technical-analysis).
 
@@ -105,3 +105,14 @@ The comparison readout appears in a draggable overlay inside the chart, initiall
 The compact comparison readout now identifies points with matching blue/orange colors rather than A/B labels. Point rows contain dates only (YYYY-MM-DD). Price delta and percentage share green/red coloring for positive/negative changes; zero remains neutral. Time delta is unsigned whole calendar days between the displayed dates, avoiding fractional hours and DST effects. Bar counts and percentages of loaded history are no longer displayed. The drag handle is a grip icon.
 
 The comparison delta shows percentage first, followed by dollar change in parentheses, e.g. `Δ +5.00% ($+10.000)`.
+
+## Incremental update limits and alternatives
+
+The browser update fills recent bars after the latest saved timestamp, with one
+bar of overlap. It does not detect gaps inside older history. Requests start no
+earlier than 729 days before now because hourly history is provider-limited;
+older saved rows remain local even when unavailable from Yahoo. This reduces
+network transfers compared with full-history downloads. Full CLI refreshes can
+repair older available gaps and reconcile historical corporate-action adjustments,
+but download the history again and replace files. Incremental merging does not
+adjust older local rows after splits or dividends. Daily data is unchanged.

@@ -12,15 +12,31 @@ LOCK = threading.Lock()
 BASE = Path(__file__).resolve().parent
 
 
-def refresh(ticker):
-    companies = market.constituents()
-    if ticker not in {c['ticker'] for c in companies}:
-        raise ValueError('Select a ticker in the S&P 500 catalog.')
+def refresh():
     (market.ROOT / 'hourly').mkdir(parents=True, exist_ok=True)
-    _, error = market.download_one((ticker, 'hourly'))
-    if error:
-        raise RuntimeError(error)
-    market.manifest(companies, {})
+    companies = market.constituents()
+    errors = {}
+    updated = 0
+    # Use isolated workers, as in the CLI, to avoid shared yfinance cache locks.
+    with market.ProcessPoolExecutor(
+        max_workers=4, mp_context=market.multiprocessing.get_context('spawn'),
+        initializer=market.initialize_worker,
+    ) as pool:
+        for offset in range(0, len(companies), 12):
+            batch = companies[offset:offset + 12]
+            tasks = [(company['ticker'], 'hourly') for company in batch]
+            for ticker, error in pool.map(market.update_hourly, tasks):
+                if error:
+                    errors[f'{ticker}/hourly'] = error
+                else:
+                    updated += 1
+            market.manifest(companies, errors)
+            if offset + 12 < len(companies):
+                market.time.sleep(1)
+    message = f'Updated {updated} of {len(companies)} symbols with recent hourly bars.'
+    if errors:
+        message += f' {len(errors)} failed; existing prices retained for those symbols. Retry to update them.'
+    return {'message': message, 'updated': updated, 'total': len(companies), 'errors': errors}
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -37,16 +53,21 @@ class Handler(SimpleHTTPRequestHandler):
             length = int(self.headers.get('Content-Length', '0'))
             if not 0 < length <= 1024:
                 raise ValueError('Invalid request size.')
-            ticker = json.loads(self.rfile.read(length))['ticker']
-            if not isinstance(ticker, str):
-                raise ValueError('Invalid ticker.')
-            with LOCK:
-                refresh(ticker)
-            self.respond(200, {'message': f'Updated {ticker} with latest available hourly bars.'})
+            payload = json.loads(self.rfile.read(length))
+            if not isinstance(payload, dict):
+                raise ValueError('Expected a JSON object.')
+            if not LOCK.acquire(blocking=False):
+                self.respond(409, {'message': 'A market update is already running. Try again later.'})
+                return
+            try:
+                result = refresh()
+            finally:
+                LOCK.release()
+            self.respond(200, result)
         except (ValueError, KeyError) as error:
             self.respond(400, {'message': str(error)})
         except Exception:
-            self.respond(502, {'message': 'Market update failed. Existing data retained; retry later.'})
+            self.respond(502, {'message': 'Market update interrupted. Completed downloads are retained; retry to finish all symbols.'})
 
     def respond(self, status, payload):
         body = json.dumps(payload).encode()
