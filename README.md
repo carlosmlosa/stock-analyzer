@@ -170,3 +170,67 @@ splits or dividends; incremental updates do not rescale older saved bars.
 
 See [AGENTS.md](AGENTS.md) for repository structure, change conventions, test
 commands, data contracts, and editor-independent debugging instructions.
+
+## Shared workspace design
+
+Chart explorer and Stock rankings share a compact branded header, navigation,
+visual theme, and **Refresh hourly data** button. Introductory banners are omitted;
+**Scan saved data** stays in the rankings toolbar. Refresh retains the existing
+hourly-only API; it does not refresh daily ranking data. The explorer keeps its hourly High chart, company search, comparison, and
+export controls. On narrow screens, the chart spans the available width and the
+smoother and indicator panels move below it.
+
+## Stock rankings
+
+Open **Stock rankings** beside **Chart explorer**, then choose **Rank saved data**.
+It ranks up to ten growth-momentum candidates and ten swing-watchlist candidates
+using saved daily adjusted OHLCV. Growth is a price-trend proxy without business
+fundamentals; scores are relative rankings, not return forecasts. Each result
+shows a score ring, compact metrics, daily date, and a 60-session daily Close
+sparkline with an independent scale, plus a link to the existing hourly High
+chart. A scan summary shows coverage and candidates; progress and empty states
+explain what is happening without fabricating results.
+
+Populate daily files explicitly (network access required):
+
+```sh
+uv run --locked python download_sp500.py --resolution daily
+```
+
+If all listings are excluded and the page says no daily datasets are downloaded,
+only hourly data is available. Run the daily command above, reload Stock rankings,
+and scan again. The page opens **Manage daily data** automatically in this case.
+
+Existing files are reused. Add `--refresh` only when you intend to replace daily
+history with a fresh download. The explorer's market refresh updates hourly data
+only. No downloads occur when ranking. At least 253 valid aligned daily bars and
+$1M average 20-session dollar volume are required. Older endpoints are excluded
+relative to the latest parsed file; the latest loaded session can itself be old
+or incomplete. The page reports exclusions and can return fewer than ten names.
+
+Growth combines 252/126-session returns, distance above SMA200, and lower
+63-return volatility after a Close > SMA50 > SMA200 trend gate. Swing combines
+20-session return, distance from the prior 20-session high in ATR units, and
+relative volume after a trend/proximity gate. Components use midrank percentiles
+within each screen. There is no sector cap or validated backtest in this version.
+
+The [mathematical guide](docs/stock-ranking-math.pdf) explains the exact
+formulas, FIR/IIR interpretation, ranking weights, limitations, and validation
+protocol. Its source is [docs/build-ranking-guide.py](docs/build-ranking-guide.py)
+and can be regenerated with Python, Matplotlib, NumPy, and ReportLab (authoring
+dependencies only). It includes book-style LaTeX equations and seven synthetic
+figures illustrating FIR/IIR filters, momentum, percentile scores, and breakouts.
+The standalone [LaTeX equation source](docs/stock-ranking-equations.tex) is also
+included. To rebuild without changing application dependencies:
+
+```sh
+uv run --no-project --with matplotlib --with reportlab --with pypdf python docs/build-ranking-guide.py
+```
+
+Run the deterministic calculation tests with
+`node --test playground/recommender.test.js`.
+
+The [Swing Trading Indicators Math Guide](docs/Swing_Trading_Indicators_Math_Guide.pdf)
+uses typeset LaTeX-style equations while retaining its original figures and text.
+Its original is preserved under `docs/sources/`; rebuild with
+`docs/typeset-swing-guide.py` and the isolated authoring dependencies listed there.

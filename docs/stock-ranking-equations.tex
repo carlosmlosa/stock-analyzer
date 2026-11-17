@@ -1,0 +1,74 @@
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+\section*{Signal Lab: ranking equations}
+\begin{equation}
+\overline{\mathcal{V}}_{20,t}=\frac{1}{20}\sum_{k=0}^{19} C_{t-k}V_{t-k}\ \geq\ 10^6
+\end{equation}
+\begin{equation}
+M_{N,t}=\frac{1}{N}\sum_{k=0}^{N-1}C_{t-k}
+\end{equation}
+\begin{equation}
+H_N(z)=\frac{1}{N}\sum_{k=0}^{N-1}z^{-k},\qquad \tau_g=\frac{N-1}{2}
+\end{equation}
+\begin{equation}
+R_{k,t}=\frac{C_t}{C_{t-k}}-1
+\end{equation}
+\begin{equation}
+\log(1+R_{k,t})=\log C_t-\log C_{t-k}
+\end{equation}
+\begin{equation}
+H_{\Delta,k}(z)=1-z^{-k},\qquad T_t=\frac{C_t}{M_{200,t}}-1
+\end{equation}
+\begin{equation}
+r_j=\log\!\left(\frac{C_j}{C_{j-1}}\right),\qquad \bar r_t=\frac{1}{63}\sum_{k=0}^{62}r_{t-k}
+\end{equation}
+\begin{equation}
+\sigma_t=\sqrt{\frac{252}{62}\sum_{k=0}^{62}(r_{t-k}-\bar r_t)^2}
+\end{equation}
+\begin{equation}
+\mathrm{TR}_t=\max\!\left(H_t-L_t,\ |H_t-C_{t-1}|,\ |L_t-C_{t-1}|\right)
+\end{equation}
+\begin{equation}
+A_t=A_{t-1}+\frac{1}{14}(\mathrm{TR}_t-A_{t-1})
+\end{equation}
+\begin{equation}
+H_A(z)=\frac{\alpha}{1-(1-\alpha)z^{-1}},\qquad \alpha=\frac{1}{14}
+\end{equation}
+\begin{equation}
+C_t>M_{50,t}>M_{200,t},\qquad R_{252,t}>0
+\end{equation}
+\begin{equation}
+P(x)=\frac{L(x)+\frac{E(x)-1}{2}}{n-1}\quad (n>1)
+\end{equation}
+\begin{equation}
+L(x)=\sum_{i=1}^{n}\mathbf{1}(x_i<x),\qquad E(x)=\sum_{i=1}^{n}\mathbf{1}(x_i=x)
+\end{equation}
+\begin{equation}
+P(x)=\frac{1}{2}\quad (n=1)
+\end{equation}
+\begin{equation}
+G=100\left[0.40P(R_{252})+0.30P(R_{126})\right.
+\end{equation}
+\begin{equation}
+\left.\qquad\quad +0.20P(T)+0.10P(-\sigma)\right]
+\end{equation}
+\begin{equation}
+(P(R_{252}),P(R_{126}),P(T),P(-\sigma))=(0.90,0.80,0.70,0.60)
+\end{equation}
+\begin{equation}
+G=100(0.40\cdot0.90+0.30\cdot0.80+0.20\cdot0.70+0.10\cdot0.60)=80
+\end{equation}
+\begin{equation}
+B_t=\max_{1\leq k\leq20}H_{t-k}
+\end{equation}
+\begin{equation}
+D_t=\frac{C_t-B_t}{A_t},\qquad Q_t=\frac{V_t}{\frac{1}{20}\sum_{k=1}^{20}V_{t-k}}
+\end{equation}
+\begin{equation}
+C_t>M_{50,t},\qquad R_{20,t}>0,\qquad -1\leq D_t\leq2
+\end{equation}
+\begin{equation}
+S=100\left[0.40P(R_{20})+0.35P(D)+0.25P(Q)\right]
+\end{equation}
+\end{document}

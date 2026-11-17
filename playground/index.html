@@ -1,35 +1,38 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Signal Lab</title><link rel="stylesheet" href="style.css"></head>
-<body>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#153d35"><title>Chart explorer · Signal Lab</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="explorer.css"></head>
+<body class="lab-page explorer-page">
 <main>
+<header class="lab-topbar"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">∿</span> Signal Lab <span class="brand-sub">MARKET RESEARCH</span></a><nav class="app-nav" aria-label="Main navigation"><a href="index.html" aria-current="page">Chart explorer</a><a href="recommender.html">Stock rankings</a></nav><div class="header-actions"><button id="refresh" class="header-refresh" title="Update hourly prices for all catalog companies">↻ Refresh hourly data</button><a class="guide-link" href="../docs/stock-ranking-math.pdf">Methodology <span aria-hidden="true">↗</span></a></div></header>
+<div class="header-feedback"><span id="refreshStatus" role="status" aria-live="polite"></span></div>
+<div class="explorer-shell">
+<h1 class="sr-only">Chart explorer</h1>
 <div class="company-bar">
-<select id="company" aria-label="Company"><option value="NVDA">NVDA · NVIDIA</option></select>
-<button id="refresh">↻ Update all market data</button>
-<input id="companySearch" type="search" aria-label="Find another company" placeholder="Find another company…">
-<span id="refreshStatus" role="status" aria-live="polite"></span>
+<label class="company-field"><span>SELECT COMPANY</span><select id="company" aria-label="Company"><option value="NVDA">NVDA · NVIDIA</option></select></label>
+<label class="search-field"><span>SEARCH THE CATALOG</span><input id="companySearch" type="search" aria-label="Find another company" placeholder="Ticker, company, or sector…"></label>
 </div>
 <section class="workspace">
 <aside class="smoothers" aria-label="Smoothing controls">
-<h2>Smooth</h2>
-<label>W <output id="windowValue"></output><input id="window" aria-label="Smoothing window" type="range" min="3" max="81" step="2" value="21"></label>
-<label>α <output id="alphaValue"></output><input id="alpha" aria-label="Exponential alpha" type="range" min="1" max="100" value="18"></label>
+<span class="control-kicker">FILTER THE NOISE</span><h2>Smoothers</h2>
+<label>Window <output id="windowValue"></output><input id="window" aria-label="Smoothing window" type="range" min="3" max="81" step="2" value="21"></label>
+<label>Alpha <output id="alphaValue"></output><input id="alpha" aria-label="Exponential alpha" type="range" min="1" max="100" value="18"></label>
 <div id="methods"></div>
 </aside>
 <div class="plots">
-<div class="chart-head"><h2 id="chartTitle">Loading…</h2><label class="toggle"><input id="raw" type="checkbox" checked> Price</label></div>
+<div class="chart-head"><div><span class="control-kicker">PRICE &amp; SIGNALS</span><h2 id="chartTitle">Loading…</h2></div><label class="toggle"><input id="raw" type="checkbox" checked> Hourly High</label></div>
 <div id="periods" class="periods" role="group" aria-label="Viewing window"></div>
 <div id="chartLegend" class="chart-legend" aria-label="Selected curves and indicator ranges"></div>
 <div class="chart-wrap"><canvas id="chart" aria-label="Stock value, selected smoothed curves and technical indicators" role="img"></canvas><div id="tooltip" hidden></div><div id="comparisonBox" class="comparison-box" aria-label="Draggable point comparison"><button id="comparisonHandle" aria-label="Drag comparison results">⠿</button><output id="comparison" aria-live="polite">Click two points to compare</output><button id="clearPoints" hidden>Clear</button></div></div>
-<div class="chart-footer"><span id="sampleCount"></span><button id="reset">Reset</button><button id="export">↓ CSV</button></div>
+<div class="chart-footer"><span id="sampleCount"></span><button id="reset">Reset view</button><button id="export">↓ Export CSV</button></div>
 <p id="status" role="status" aria-live="polite"></p>
 </div>
 <aside class="indicators" aria-label="Indicator controls">
-<h2>Indicators</h2>
-<label>N <input id="indicatorPeriod" aria-label="Indicator period in bars" type="number" min="2" max="200" value="20"></label>
+<span class="control-kicker">READ THE TREND</span><h2>Indicators</h2>
+<label>Period <input id="indicatorPeriod" aria-label="Indicator period in bars" type="number" min="2" max="200" value="20"></label>
 <div id="indicatorMethods"></div>
 </aside>
 </section>
 <div hidden><span id="catalogStatus"></span><span id="rangeNote"></span><span id="indicatorNote"></span><div id="metrics"></div></div>
-</main><script type="module" src="app.js"></script>
+<footer class="explorer-footer"><span>SIGNAL LAB / RESEARCH WORKSPACE</span><span>Scroll to zoom · Drag to pan · Select two points to compare</span></footer>
+</div></main><script type="module" src="app.js"></script>
 </body></html>

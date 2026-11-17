@@ -1,3 +1,4 @@
+import {bindRefresh} from './refresh.js';
 import {addPoint,comparePoints} from './comparison.js';
 import {indicators} from './indicators.js';
 import {smooth,parseCSV} from './smoothing.js';
@@ -13,7 +14,7 @@ const indicatorDefinitions=[
  ['atr','ATR','#337f83','Wilder 14, in price units · independent scale.']
 ];
 let technical=null, indicatorData=null, indicatorCurves=[];
-let loadId=0, catalog=[], selectedCompany="NVDA";
+let loadId=0, catalog=[], selectedCompany=new URLSearchParams(location.search).get("company") || "NVDA";
 let selectedPoints=[];
 let values=[], dates=[], curves=[], datasetName="NVDA", view=[0,1], hover=null, drag=null, activePeriod="all";
 for(const [id,name,color,description] of definitions){const label=document.createElement('label');label.className='method';label.style.setProperty('--color',color);const check=document.createElement('input');check.type='checkbox';check.value=id;check.checked=id==='gaussian';check.addEventListener('change',update);const span=document.createElement('span');const strong=document.createElement('strong');strong.textContent=name;const small=document.createElement('small');small.textContent=description;span.append(strong);label.append(check,span);$('methods').append(label);}
@@ -234,16 +235,7 @@ $('company').onchange=()=>{selectedCompany=$('company').value;loadStock();};
 $('export').onclick=()=>{if(!values.length)return;const content=[['sample','date','original',...[...curves,...indicatorCurves].map(c=>c.id)].join(','),...values.map((v,i)=>[i+1,dates[i] ? '"'+dates[i].replaceAll('"','""')+'"' : '',v,...[...curves,...indicatorCurves].map(c=>c.data[i]??'')].join(','))].join('\n');const url=URL.createObjectURL(new Blob([content],{type:'text/csv'}));const a=document.createElement('a');a.href=url;a.download='signal-lab-comparison.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};new ResizeObserver(draw).observe(canvas);
 
 $('indicatorPeriod').onchange=update;
-$('refresh').onclick=async()=>{
- $('refresh').disabled=true;$('refreshStatus').textContent='Fetching missing recent hourly bars for all symbols… This may take several minutes.';
- try{
-  const response=await fetch('/api/refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
-  if(response.status===501||response.status===404)throw new Error('Start the refresh server with: python server.py');
-  const result=await response.json();if(!response.ok)throw new Error(result.message);
-  $('refreshStatus').textContent=result.message;await loadCatalog();
- }catch(error){$('refreshStatus').textContent=error.message;}
- finally{$('refresh').disabled=false;}
-};
+bindRefresh($('refresh'),$('refreshStatus'),loadCatalog);
 
 loadCatalog();
 
