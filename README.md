@@ -4,32 +4,55 @@ A small Python project that downloads ten years of daily NVDA prices and display
 
 ## Setup
 
-Use Python 3.10 or newer. From the project directory:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) and
+[VS Code](https://code.visualstudio.com/), then open this repository folder in VS Code.
+In its terminal, run:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
+uv sync --locked
 ```
 
-On Windows, activate the environment with `.venv\Scripts\activate` instead.
+uv installs Python 3.12 if needed and creates `.venv` with the dependencies pinned
+in `uv.lock`. No manual virtual environment activation is needed for `uv run`.
+Python 3.10 or newer is supported; `.python-version` selects 3.12 for development.
+
+To populate the company explorer and start it:
+
+```bash
+uv run python download_sp500.py --resolution hourly
+uv run python server.py
+```
+
+Open [Signal Lab](http://localhost:8000/playground/). The initial download covers
+all catalog companies, requires internet access, and can take several minutes.
+Rerun the download to retry missing files. Starting the server alone does not
+download chart data. Stop a terminal server with **Ctrl+C**.
 
 ## Debug in VS Code
 
-Install the Microsoft Python and Python Debugger extensions, open this repository
-as your workspace, and use **Python: Select Interpreter** to select `.venv`.
-After installing the requirements above, select **Signal Lab: Python server** in
-**Run and Debug** and press **F5**. The launch configuration automatically opens
-[Signal Lab](http://localhost:8000/playground/) in your default browser. Breakpoints in
-`server.py` and its Python imports work, including market refresh requests.
-Stop the server with **Shift+F5**. See [VS Code debugging](docs/vscode-debugging.md)
-for configuration details and alternatives.
+Install the recommended Microsoft Python, Python Debugger, and Jupyter extensions
+when VS Code prompts. The workspace defaults to `.venv`; if another interpreter
+was previously selected, use **Python: Select Interpreter** to choose `.venv`.
+Select **Signal Lab: Python server** in **Run and Debug** and press **F5**.
+The launch runs `uv sync --locked` first and automatically opens Signal Lab in
+your browser. Stop debugging with **Shift+F5**.
+
+Use **Terminal → Run Task** for environment sync, the server, data downloads,
+Python tests, or Jupyter. VS Code's Testing view discovers the existing unittest
+suite. For notebooks, select the `.venv` Python kernel. See
+[VS Code debugging](docs/vscode-debugging.md) for details.
+
+`pyproject.toml` defines dependencies and `uv.lock` pins resolved versions.
+Use `uv add <package>` to add a dependency and `uv lock --upgrade` followed by
+`uv sync --locked` to update versions. `requirements.txt` is a compatibility
+export; regenerate it after dependency changes with
+`uv export --format requirements-txt --no-hashes --output-file requirements.txt`.
 
 ## Download and plot
 
 ```bash
-python download_data.py
-jupyter notebook
+uv run python download_data.py
+uv run jupyter notebook
 ```
 
 Open `notebooks/nvda_trend.ipynb` and run the code cells in order. Choose **From** and **Through** dates, a **Period (days)** range, and **Smooth (bins)** width. Changing a control redraws four vertically stacked plots: adjusted closing price, Welch power spectrum, raw versus smoothed FFT magnitude, and original versus reconstructed daily log returns. Select at least 64 trading days. All plots render inline with SVG, so they do not need WebGL. Run the download command again whenever you want current data.
@@ -51,7 +74,7 @@ The fourth subplot applies the inverse real FFT to the smoothed spectrum and com
 Explore and compare five smoothing methods in **Signal Lab**, a standalone interactive SPA with automatic loading of the downloaded NVDA data, optional CSV upload, adjustable windows and exponential alpha, hover inspection, zoom/pan, and CSV export.
 
 ```bash
-python3 -m http.server 8000
+uv run python -m http.server 8000
 ```
 
 Open [Signal Lab](http://localhost:8000/playground/). No installation or build step is required. With an S&P 500 catalog, the app defaults to NVDA hourly data and lets you select any company. Without a catalog it uses `data/nvda_hourly.csv` and the original daily `data/nvda_10y.csv`. Choose **Daily · 10 years** for longer history. Both select adjusted Close prices and retain dates. It generates no random time series. You can also upload another stock CSV and select a numeric column. All uploaded data stays in your browser. See [the playground documentation](docs/smoothing-playground.md) for method pros and cons, boundary behavior, data limits, and verification instructions.
@@ -61,17 +84,15 @@ The playground includes viewing presets for **Last day, Last week, Last month, Y
 ## Hourly stock data
 
 ```bash
-source .venv/bin/activate
-python download_data.py --interval 1h
+uv run python download_data.py --interval 1h
 ```
 
-This saves regular-session hourly NVDA bars separately to `data/nvda_hourly.csv`, with New York timestamps and UTC offsets. Hourly history is provider-limited; this download requests `730d` and prints the actual returned range (the current snapshot contains 5,073 bars across 730 trading dates); the daily download remains available via `python download_data.py`. The final bar of a trading day can be shorter than one hour, and the latest bar can be incomplete during market hours. Presets count trading dates: Last day shows all hourly bars from the latest session, Last week uses five sessions, and so on. Smoothing window size counts bars at the selected resolution.
+This saves regular-session hourly NVDA bars separately to `data/nvda_hourly.csv`, with New York timestamps and UTC offsets. Hourly history is provider-limited; this download requests `730d` and prints the actual returned range (the current snapshot contains 5,073 bars across 730 trading dates); the daily download remains available via `uv run python download_data.py`. The final bar of a trading day can be shorter than one hour, and the latest bar can be incomplete during market hours. Presets count trading dates: Last day shows all hourly bars from the latest session, Last week uses five sessions, and so on. Smoothing window size counts bars at the selected resolution.
 
 ## S&P 500 company explorer
 
 ```bash
-source .venv/bin/activate
-python download_sp500.py
+uv run python download_sp500.py
 ```
 
 The downloader caches the constituent snapshot and saves ten-year daily and provider-limited hourly prices for every listed share class under `data/sp500/`. Downloads run in small batches with up to four isolated workers with separate temporary yfinance caches (use `--workers 1` for sequential downloads); successful files are saved individually. Rerun the command to retry missing files, or use `--refresh` to update the list and prices. Use `--resolution daily` or `--resolution hourly` for only one resolution.
@@ -80,7 +101,7 @@ The playground loads `data/sp500/manifest.json`. Search by ticker, company name,
 
 Constituents come from the [DataHub S&P 500 dataset](https://github.com/datasets/s-and-p-500-companies), which maintains a Wikipedia-derived snapshot. This is a current-constituent explorer, not a historical membership backtest. Newly listed companies may have less than ten years of history. The list may contain more than 500 tickers because some companies have multiple share classes. All price data remains local after download.
 
-Downloader checks: `.venv/bin/python -m unittest discover -s tests -v` verifies share-class normalization, hourly timezone preservation, manifest availability, and preservation of existing files after bad responses.
+Downloader checks: `uv run python -m unittest discover -s tests -v` verifies share-class normalization, hourly timezone preservation, manifest availability, and preservation of existing files after bad responses.
 
 Hourly requests rejected by Yahoo are retried with an explicit 729-calendar-day range; actual coverage is recorded in the manifest.
 
@@ -97,11 +118,10 @@ The graph workspace spans the full page width, without outer side margins, a sur
 Start the local server to enable **Update all market data** for every catalog symbol:
 
 ```bash
-source .venv/bin/activate
-python server.py
+uv run python server.py
 ```
 
-Open [Signal Lab](http://localhost:8000/playground/). The button downloads the latest available adjusted regular-session hourly bars from Yahoo Finance for every symbol in the cached S&P 500 catalog, requests only the range from each symbol’s latest saved timestamp to now, merges new bars into its CSV, updates the catalog, and reloads the selected chart. The last saved bar is requested again to update an incomplete bar; duplicate timestamps keep the newly fetched value. Symbols without a file get an initial history download. Older saved history is preserved. It uses four isolated workers in batches and can take several minutes. The button stays disabled until completion; concurrent refresh requests are rejected. The completion message reports updated and failed symbol counts; failed symbols retain their existing prices, and failures are recorded in the manifest. The latest timestamp is shown above the chart. Provider data can be delayed and the current bar can be incomplete. A failed download preserves existing prices. The plain `http.server` command still supports offline charts, but cannot fetch market updates. The CLI alternative is `python download_sp500.py --refresh --resolution hourly`; it also refreshes the constituent list. The browser refresh updates hourly prices only, leaving daily files unchanged.
+Open [Signal Lab](http://localhost:8000/playground/). The button downloads the latest available adjusted regular-session hourly bars from Yahoo Finance for every symbol in the cached S&P 500 catalog, requests only the range from each symbol’s latest saved timestamp to now, merges new bars into its CSV, updates the catalog, and reloads the selected chart. The last saved bar is requested again to update an incomplete bar; duplicate timestamps keep the newly fetched value. Symbols without a file get an initial history download. Older saved history is preserved. It uses four isolated workers in batches and can take several minutes. The button stays disabled until completion; concurrent refresh requests are rejected. The completion message reports updated and failed symbol counts; failed symbols retain their existing prices, and failures are recorded in the manifest. The latest timestamp is shown above the chart. Provider data can be delayed and the current bar can be incomplete. A failed download preserves existing prices. The plain `http.server` command still supports offline charts, but cannot fetch market updates. The CLI alternative is `uv run python download_sp500.py --refresh --resolution hourly`; it also refreshes the constituent list. The browser refresh updates hourly prices only, leaving daily files unchanged.
 
 Choose **SMA, EMA, RSI, MACD, Volatility, and ATR** using the sidebar checkboxes alongside the smoothing methods. All selected curves appear on the stock chart and share its date range, hover, zoom, and pan. Indicators are initially unchecked. SMA and EMA use the price axis; other indicators fit independently to the chart height, with actual visible ranges in the colored legend and actual values in the tooltip. The right axis shows relative position within each indicator's displayed range, not a shared financial unit. Curve intersections across different axes do not indicate equal values. RSI always uses 0–100. MACD includes its signal and histogram on the same indicator scale.
 
@@ -111,7 +131,7 @@ Overlaying curves makes visual comparison compact, but independent scales requir
 
 Refresh alternatives: on-demand refresh gives explicit control and fewer provider requests, while automatic polling reduces manual work but creates background traffic and can hit provider limits. This implementation uses on-demand refresh. The existing button refreshes all catalog symbols for a consistent snapshot; selected-company updates would be faster and use fewer requests but leave other symbols stale.
 
-Verification: `cd playground && npm test` and `.venv/bin/python -m unittest discover -s tests -v` from the project root.
+Verification: `cd playground && npm test` and `uv run python -m unittest discover -s tests -v` from the project root.
 
 ## Compact chart layout
 
@@ -129,7 +149,7 @@ The comparison delta shows percentage first, followed by dollar change in parent
 
 ## Repository contents
 
-Git excludes the virtual environment, Python caches and downloaded market snapshots under `data/`. After cloning, install requirements and run `python download_sp500.py` to recreate the company catalog and prices before starting `python server.py`.
+Git excludes the virtual environment, Python caches and downloaded market snapshots under `data/`. After cloning, run `uv sync --locked`, then run `uv run python download_sp500.py` to recreate the company catalog and prices before starting `uv run python server.py`.
 
 ### Incremental market updates
 
@@ -142,6 +162,11 @@ Empty or failed provider responses leave the symbol's file unchanged and appear
 in the failure summary. Daily files remain unchanged.
 
 Incremental updates minimize transfers and preserve local history. A full
-`python download_sp500.py --refresh --resolution hourly` rebuild downloads more
+`uv run python download_sp500.py --refresh --resolution hourly` rebuild downloads more
 data but can repair older gaps and reconcile historical price adjustments from
 splits or dividends; incremental updates do not rescale older saved bars.
+
+## Contributing with coding agents
+
+See [AGENTS.md](AGENTS.md) for repository structure, change conventions, test
+commands, data contracts, and editor-independent debugging instructions.

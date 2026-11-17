@@ -3,7 +3,9 @@
 The checked-in `.vscode/launch.json` launches `server.py` using the Microsoft
 Python Debugger extension (`debugpy`). Install the Microsoft Python extension
 as well and select the project's `.venv` with **Python: Select Interpreter**.
-Install `requirements.txt` into that environment before debugging.
+Run `uv sync --locked` to create that environment. The launch configuration also
+runs the **uv: sync** task before starting the debugger. Install uv and ensure it
+is on VS Code’s PATH (restart VS Code after installing uv if necessary).
 
 Choose **Signal Lab: Python server** in Run and Debug, then press **F5**.
 The server runs in the integrated terminal with the repository as its working
@@ -40,3 +42,16 @@ path to edit.
 - **Plain static server:** `python -m http.server 8000` is sufficient for viewing
   downloaded charts, but does not support the market refresh API or its Python
   request breakpoints.
+
+## Tasks and notebooks
+
+Use **Terminal → Run Task** to sync dependencies, run the server without the
+debugger, download hourly S&P 500 data or daily NVDA data, run Python tests, or
+start Jupyter. Downloads are explicit tasks; F5 only starts the server. The first
+S&P 500 download can take several minutes and requires internet access.
+
+Open `notebooks/nvda_trend.ipynb` and choose the `.venv` Python kernel after
+running the NVDA daily download task. The Microsoft Jupyter extension is included
+in workspace recommendations. The Testing view runs the existing unittest suite.
+Node.js is only needed for the optional playground checks: run `npm test` from
+`playground/`; the frontend itself has no build or npm install step.

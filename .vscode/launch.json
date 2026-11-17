@@ -6,7 +6,10 @@
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/server.py",
-      "args": ["--port", "8000"],
+      "args": [
+        "--port",
+        "8000"
+      ],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "redirectOutput": true,
@@ -15,7 +18,8 @@
         "uriFormat": "%s",
         "action": "openExternally"
       },
-      "justMyCode": true
+      "justMyCode": true,
+      "preLaunchTask": "uv: sync"
     }
   ]
 }
